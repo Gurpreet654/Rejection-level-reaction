@@ -1,912 +1,449 @@
 //@version=6
+
 indicator("Opening Range Levels + 3M/5M Trade Map", overlay=true,
-     max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+
+**     max_lines_count=500, max_labels_count=500, max_boxes_count=500)**
 
 //────────────────────────────────────────────
+
 // INPUTS
+
 //────────────────────────────────────────────
+
 openingTime = input.time(
-     defval=timestamp("15 Aug 2026 09:15 +0530"),
-     title="Opening Candle Date and Time (IST)")
+
+**     defval=timestamp("15 Aug 2026 09:15 +0530"),**
+
+**     title="Opening Candle Date and Time (IST)")**
 
 // GVZopen = input.float(20.0, "GVZ Opening", minval=0.01, step=0.01)
+
 string volatilitySymbol = "VANTAGE:VIX"
 
 GVZopenA = request.security(
-     volatilitySymbol,
-     "D",
-     open,
-     gaps=barmerge.gaps_off,
-     lookahead=barmerge.lookahead_off)
+
+**     volatilitySymbol,**
+
+**     "D",**
+
+**     open,**
+
+**     gaps=barmerge.gaps_off,**
+
+**     lookahead=barmerge.lookahead_off)**
 
 signalMinutes = input.int(5, "Signal Timeframe (Minutes)", options=[3, 5])
+
 previousDayRangeThreshold = input.float(
-     85.0,
-     "Previous Day Range Threshold ($)",
-     minval=1.0,
-     step=1.0)
+
+**     85.0,**
+
+**     "Previous Day Range Threshold ($)",**
+
+**     minval=1.0,**
+
+**     step=1.0)**
+
 minimumTP1RewardRisk = input.float(
-     1.2,
-     "Minimum TP1 Reward/Risk",
-     minval=0.1,
-     step=0.1)
+
+**     1.2,**
+
+**     "Minimum TP1 Reward/Risk",**
+
+**     minval=0.1,**
+
+**     step=0.1)**
+
 candles = signalMinutes == 5 ? 276 : 460
+
 // Capture the opening price internally from 5-minute data. This keeps the
+
 // selected opening available when the chart is switched between 3M and 5M.
+
 selectedOpen5M = request.security(
-     syminfo.tickerid,
-     "5",
-     time <= openingTime and time_close > openingTime ? open : na,
-     gaps=barmerge.gaps_off,
-     lookahead=barmerge.lookahead_off)
+
+**     syminfo.tickerid,**
+
+**     "5",**
+
+**     time <= openingTime and time_close > openingTime ? open : na,**
+
+**     gaps=barmerge.gaps_off,**
+
+**     lookahead=barmerge.lookahead_off)**
 
 var float openPrice = na
 
 if not na(selectedOpen5M)
-    openPrice := selectedOpen5M
+
+**    openPrice := selectedOpen5M**
+
 
 
 //Auto range
 
 previousDayHigh = request.security(
-     syminfo.tickerid, "D", high[1],
-     gaps=barmerge.gaps_off,
-     lookahead=barmerge.lookahead_on)
+
+**     syminfo.tickerid, "D", high[1],**
+
+**     gaps=barmerge.gaps_off,**
+
+**     lookahead=barmerge.lookahead_on)**
 
 previousDayLow = request.security(
-     syminfo.tickerid, "D", low[1],
-     gaps=barmerge.gaps_off,
-     lookahead=barmerge.lookahead_on)
+
+**     syminfo.tickerid, "D", low[1],**
+
+**     gaps=barmerge.gaps_off,**
+
+**     lookahead=barmerge.lookahead_on)**
 
 previousDayPriceRange = previousDayHigh - previousDayLow
+
 previousDayRange = previousDayPriceRange * 100
+
 lowRangeMode = previousDayPriceRange < previousDayRangeThreshold
+
 slOffsetFactor = lowRangeMode ? 0.25 : 0.125
 
+// After TP1, every trailing step is always 12.5% in both range modes.
+
+trailingOffsetFactor = 0.125
+
 rangeSource = input.string(
-     "Volatility Index",
-     "Range Source",
-     options=["Volatility Index", "Previous Day Range"])
+
+**     "Volatility Index",**
+
+**     "Range Source",**
+
+**     options=["Volatility Index", "Previous Day Range"])**
 
 GVZopen = rangeSource == "Volatility Index" ? GVZopenA : previousDayRange
 
 
+
 //────────────────────────────────────────────
+
 // RANGE
+
 //────────────────────────────────────────────
 
 rangeValA = (GVZopen / 15.87) * openPrice / 100
-rangeValB = GVZopen / candles
+
+rangeValB = (GVZopen / candles)*1
+
 rangeVal = GVZopen < 50 ? rangeValA : rangeValB
 
 // Cross-check panel for the two available range sources.
+
 var table rangeInfo = table.new(
-     position.top_right, 2, 2,
-     bgcolor=color.new(color.black, 15),
-     frame_color=color.gray,
-     frame_width=1)
+
+**     position.top_right, 2, 2,**
+
+**     bgcolor=color.new(color.black, 15),**
+
+**     frame_color=color.gray,**
+
+**     frame_width=1)**
 
 if barstate.islast
-    table.cell(rangeInfo, 0, 0, "VIX opening", text_color=color.white)
-    table.cell(rangeInfo, 1, 0, str.tostring(GVZopenA, "#.###"), text_color=color.aqua)
-    table.cell(rangeInfo, 0, 1, "Previous H-L ($)", text_color=color.white)
-    table.cell(rangeInfo, 1, 1, str.tostring(previousDayPriceRange, format.mintick), text_color=color.aqua)
+
+**    table.cell(rangeInfo, 0, 0, "VIX opening", text_color=color.white)**
+
+**    table.cell(rangeInfo, 1, 0, str.tostring(GVZopenA, "#.###"), text_color=color.aqua)**
+
+**    table.cell(rangeInfo, 0, 1, "Previous H-L ($)", text_color=color.white)**
+
+**    table.cell(rangeInfo, 1, 1, str.tostring(previousDayPriceRange*100, format.mintick), text_color=color.aqua)**
+
 //────────────────────────────────────────────
+
 // LEVELS
+
 //────────────────────────────────────────────
-U25  = openPrice + rangeVal * 0.25
-U50  = openPrice + rangeVal * 0.50
-U75  = openPrice + rangeVal * 0.75
+
+U25  = openPrice + rangeVal * 0.25
+
+U50  = openPrice + rangeVal * 0.50
+
+U75  = openPrice + rangeVal * 0.75
+
 U100 = openPrice + rangeVal
+
 U125 = openPrice + rangeVal * 1.25
+
 U150 = openPrice + rangeVal * 1.50
+
 U175 = openPrice + rangeVal * 1.75
+
 U200 = openPrice + rangeVal * 2.00
+
 U225 = openPrice + rangeVal * 2.25
 
 // Keep upside extensions hidden until price trades above +100%.
+
 var bool upperExtensionsActive = false
 
 if not upperExtensionsActive and not na(U100) and high > U100
-    upperExtensionsActive := true
 
-D25  = openPrice - rangeVal * 0.25
-D50  = openPrice - rangeVal * 0.50
-D75  = openPrice - rangeVal * 0.75
+**    upperExtensionsActive := true**
+
+D25  = openPrice - rangeVal * 0.25
+
+D50  = openPrice - rangeVal * 0.50
+
+D75  = openPrice - rangeVal * 0.75
+
 D100 = openPrice - rangeVal
+
 D125 = openPrice - rangeVal * 1.25
+
 D150 = openPrice - rangeVal * 1.50
+
 D175 = openPrice - rangeVal * 1.75
+
 D200 = openPrice - rangeVal * 2.00
+
 D225 = openPrice - rangeVal * 2.25
 
 // Keep downside extensions hidden until price trades below -100%.
+
 var bool lowerExtensionsActive = false
 
 if not lowerExtensionsActive and not na(D100) and low < D100
-    lowerExtensionsActive := true
+
+**    lowerExtensionsActive := true**
 
 //────────────────────────────────────────────
+
 // MAIN LEVEL PLOTS
+
 //────────────────────────────────────────────
+
 plot(openPrice, "Opening", color=color.yellow)
 
 plot(U25, "+25%", color=color.green)
+
 plot(U50, "+50%", color=color.green)
+
 plot(U75, "+75%", color=color.green)
+
 plot(U100, "+100%", color=color.green)
+
 plot(upperExtensionsActive ? U125 : na, "+125%", color=color.aqua)
+
 plot(upperExtensionsActive ? U150 : na, "+150%", color=color.aqua)
+
 plot(upperExtensionsActive ? U175 : na, "+175%", color=color.aqua)
+
 plot(upperExtensionsActive ? U200 : na, "+200%", color=color.aqua)
+
 plot(upperExtensionsActive ? U225 : na, "+225%", color=color.aqua)
 
 plot(D25, "-25%", color=color.red)
+
 plot(D50, "-50%", color=color.red)
+
 plot(D75, "-75%", color=color.red)
+
 plot(D100, "-100%", color=color.red)
+
 plot(lowerExtensionsActive ? D125 : na, "-125%", color=color.orange)
+
 plot(lowerExtensionsActive ? D150 : na, "-150%", color=color.orange)
+
 plot(lowerExtensionsActive ? D175 : na, "-175%", color=color.orange)
+
 plot(lowerExtensionsActive ? D200 : na, "-200%", color=color.orange)
+
 plot(lowerExtensionsActive ? D225 : na, "-225%", color=color.orange)
 
 //────────────────────────────────────────────
+
 // LEVEL ARRAY
+
 // LOWEST → HIGHEST
+
 //────────────────────────────────────────────
+
 var levels = array.new_float(19)
 
 array.set(levels, 0, lowerExtensionsActive ? D225 : na)
+
 array.set(levels, 1, lowerExtensionsActive ? D200 : na)
+
 array.set(levels, 2, lowerExtensionsActive ? D175 : na)
+
 array.set(levels, 3, lowerExtensionsActive ? D150 : na)
+
 array.set(levels, 4, lowerExtensionsActive ? D125 : na)
+
 array.set(levels, 5, D100)
+
 array.set(levels, 6, D75)
+
 array.set(levels, 7, D50)
+
 array.set(levels, 8, D25)
+
 array.set(levels, 9, openPrice)
+
 array.set(levels, 10, U25)
+
 array.set(levels, 11, U50)
+
 array.set(levels, 12, U75)
+
 array.set(levels, 13, U100)
+
 array.set(levels, 14, upperExtensionsActive ? U125 : na)
+
 array.set(levels, 15, upperExtensionsActive ? U150 : na)
+
 array.set(levels, 16, upperExtensionsActive ? U175 : na)
+
 array.set(levels, 17, upperExtensionsActive ? U200 : na)
+
 array.set(levels, 18, upperExtensionsActive ? U225 : na)
 
 //────────────────────────────────────────────
+
 // SELECTED SIGNAL TIMEFRAME: 3M OR 5M
-//────────────────────────────────────────────
-isSignalTF = timeframe.isminutes and timeframe.multiplier == signalMinutes
 
 //────────────────────────────────────────────
-// ACTIVE TRADE VARIABLES
+
+isSignalTF = timeframe.isminutes and timeframe.multiplier == signalMinutes
+
+// Do not permit new signals during the first 20 minutes after the selected
+
+// market opening. The first eligible signal candle must open at or after +20.
+
+entryCutoffTime = openingTime + 30 * 60 * 1000
+
+entryWindowOpen = time >= entryCutoffTime
+
 //────────────────────────────────────────────
-var bool longActive  = false
+
+// ACTIVE TRADE VARIABLES
+
+//────────────────────────────────────────────
+
+var bool longActive  = false
+
 var bool shortActive = false
 
 var float tradeEntry = na
-var float tradeSL    = na
-var float tradeTP1   = na
-var float tradeTP2   = na
+
+var float tradeSL    = na
+
+var float tradeTP1   = na
+
+var float tradeTP2   = na
 
 var bool tp1Hit = false
+
 var bool tp2Hit = false
+
 var bool ctcActive = false
+
 // 0 = original SL, 1 = CTC, 2 = rejection level +/−12.5%, 3 = TP1
+
 var int slStage = 0
 
 var int tradeStartBar = na
+
 var int currentTargetNumber = 1
+
 var int currentTargetIndex = na
+
 var float lastTargetHit = na
+
 var bool targetLockPending = false
 
-// Same-level reversal protection:
-// After SL/CTC, block only the opposite direction from that same level.
-// Direction: 1 = BUY, -1 = SELL.
-var int activeLevelIndex = na
-var int blockedLevelIndex = na
-var int blockedDirection  = 0
+//────────────────────────────────────────────
+
+// PERFORMANCE COUNTERS
+
+// $1.00 movement in gold = 10 pips for this indicator.
 
 //────────────────────────────────────────────
-// DRAWING OBJECTS
+
+var int tp1PlusTrades = 0
+
+var int initialSLTrades = 0
+
+var int ctcTrades = 0
+
+var int completedTrades = 0
+
+var float capturedDollars = 0.0
+
+// Same-level reversal protection:
+
+// After SL/CTC, block only the opposite direction from that same level.
+
+// Direction: 1 = BUY, -1 = SELL.
+
+var int activeLevelIndex = na
+
+var int blockedLevelIndex = na
+
+var int blockedDirection  = 0
+
 //────────────────────────────────────────────
+
+// DRAWING OBJECTS
+
+//────────────────────────────────────────────
+
 var line entryLine = na
-var line slLine    = na
-var line tp1Line   = na
-var line tp2Line   = na
+
+var line slLine    = na
+
+var line tp1Line   = na
+
+var line tp2Line   = na
 
 var label entryLabel = na
-var label slLabel    = na
-var label tp1Label   = na
-var label tp2Label   = na
+
+var label slLabel    = na
+
+var label tp1Label   = na
+
+var label tp2Label   = na
 
 var box riskBox = na
-var box tp1Box  = na
-var box tp2Box  = na
+
+var box tp1Box  = na
+
+var box tp2Box  = na
 
 //────────────────────────────────────────────
+
 // DELETE OLD TRADE MAP
+
 //────────────────────────────────────────────
+
 clearTradeMap() =>
 
-    if not na(entryLine)
-        line.delete(entryLine)
+**    if not na(entryLine)**
 
-    if not na(slLine)
-        line.delete(slLine)
+**        line.delete(entryLine)**
 
-    if not na(tp1Line)
-        line.delete(tp1Line)
+**    if not na(slLine)**
 
-    if not na(tp2Line)
-        line.delete(tp2Line)
+**        line.delete(slLine)**
 
-    if not na(entryLabel)
-        label.delete(entryLabel)
+**    if not na(tp1Line)**
 
-    if not na(slLabel)
-        label.delete(slLabel)
+**        line.delete(tp1Line)**
 
-    if not na(tp1Label)
-        label.delete(tp1Label)
+**    if not na(tp2Line)**
 
-    if not na(tp2Label)
-        label.delete(tp2Label)
+**        line.delete(tp2Line)**
 
-    if not na(riskBox)
-        box.delete(riskBox)
+**    if not na(entryLabel)**
 
-    if not na(tp1Box)
-        box.delete(tp1Box)
+**        label.delete(entryLabel)**
 
-    if not na(tp2Box)
-        box.delete(tp2Box)
-
-// Keep only one compact result label at the actual exit point
-collapseTradeMap(string resultText, color resultColor, float resultPrice) =>
-
-    if not na(entryLine)
-        line.delete(entryLine)
-
-    if not na(slLine)
-        line.delete(slLine)
-
-    if not na(tp1Line)
-        line.delete(tp1Line)
-
-    if not na(tp2Line)
-        line.delete(tp2Line)
-
-    if not na(slLabel)
-        label.delete(slLabel)
-
-    if not na(tp1Label)
-        label.delete(tp1Label)
-
-    if not na(tp2Label)
-        label.delete(tp2Label)
-
-    if not na(riskBox)
-        box.delete(riskBox)
-
-    if not na(tp1Box)
-        box.delete(tp1Box)
-
-    if not na(tp2Box)
-        box.delete(tp2Box)
-
-    if not na(entryLabel)
-        label.delete(entryLabel)
-
-    label.new(
-         bar_index,
-         resultPrice,
-         resultText,
-         style=label.style_label_left,
-         color=resultColor,
-         textcolor=color.white,
-         size=size.small)
-
-//────────────────────────────────────────────
-// ACTIVE LONG — CONTINUE THROUGH TP1, TP2, TP3...
-//────────────────────────────────────────────
-if longActive
-    bool slMovedThisBar = false
-    line.set_x2(entryLine, bar_index)
-    line.set_x2(slLine, bar_index)
-    line.set_x2(tp1Line, bar_index)
-    box.set_right(riskBox, bar_index)
-    box.set_right(tp1Box, bar_index)
-
-    if not ctcActive and not tp1Hit and high >= tradeEntry + 6.0
-        ctcActive := true
-        slMovedThisBar := true
-        slStage := 1
-        tradeSL := tradeEntry
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "CTC  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_bottom(riskBox, tradeSL)
-
-    if targetLockPending and high >= lastTargetHit + rangeVal * slOffsetFactor
-        targetLockPending := false
-        slMovedThisBar := true
-        slStage := 3
-        tradeSL := lastTargetHit
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_bottom(riskBox, tradeSL)
-
-    for targetStep = 0 to 18
-        if longActive and not na(tradeTP1) and high >= tradeTP1
-            float hitPrice = tradeTP1
-            int hitNumber = currentTargetNumber
-            tp1Hit := true
-            slMovedThisBar := true
-            slStage := 2
-            lastTargetHit := hitPrice
-            targetLockPending := true
-            tradeSL := hitPrice - rangeVal * slOffsetFactor
-            line.set_y1(slLine, tradeSL)
-            line.set_y2(slLine, tradeSL)
-            label.set_y(slLabel, tradeSL)
-            label.set_text(slLabel, "TRAIL TP" + str.tostring(hitNumber) + "  " + str.tostring(tradeSL, format.mintick))
-            label.set_color(slLabel, color.orange)
-            box.set_bottom(riskBox, tradeSL)
-
-            string bookingText = hitNumber == 1 ? " — BOOK 50%" : hitNumber == 2 ? " — BOOK 80%" : ""
-            label.new(bar_index, hitPrice, "✓ TP" + str.tostring(hitNumber) + " HIT" + bookingText,
-                 style=label.style_label_left, color=color.green, textcolor=color.white, size=size.small)
-
-            int nextIndex = na
-            if currentTargetIndex < 18
-                for i = currentTargetIndex + 1 to 18
-                    if na(nextIndex) and not na(array.get(levels, i))
-                        nextIndex := i
-
-            if na(nextIndex)
-                collapseTradeMap("BUY, FINAL TP" + str.tostring(hitNumber), color.green, hitPrice)
-                blockedLevelIndex := na
-                blockedDirection := 0
-                longActive := false
-            else
-                currentTargetIndex := nextIndex
-                currentTargetNumber += 1
-                tradeTP1 := array.get(levels, nextIndex)
-                line.set_y1(tp1Line, tradeTP1)
-                line.set_y2(tp1Line, tradeTP1)
-                label.set_y(tp1Label, tradeTP1)
-                label.set_text(tp1Label, "TP" + str.tostring(currentTargetNumber) + "  " + str.tostring(tradeTP1, format.mintick))
-                box.set_top(tp1Box, tradeTP1)
-
-    if longActive and targetLockPending and high >= lastTargetHit + rangeVal * slOffsetFactor
-        targetLockPending := false
-        slMovedThisBar := true
-        slStage := 3
-        tradeSL := lastTargetHit
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_bottom(riskBox, tradeSL)
-
-    if longActive and low <= tradeSL and not slMovedThisBar
-        collapseTradeMap(slStage == 0 ? "BUY, SL HIT" : slStage == 1 ? "BUY, CTC" : "BUY, TRAIL SL", slStage == 0 ? color.red : color.orange, tradeSL)
-        if not tp1Hit
-            blockedLevelIndex := activeLevelIndex
-            blockedDirection := 1
-        else
-            blockedLevelIndex := na
-            blockedDirection := 0
-        longActive := false
-
-//────────────────────────────────────────────
-// ACTIVE SHORT — CONTINUE THROUGH TP1, TP2, TP3...
-//────────────────────────────────────────────
-if shortActive
-    bool slMovedThisBar = false
-    line.set_x2(entryLine, bar_index)
-    line.set_x2(slLine, bar_index)
-    line.set_x2(tp1Line, bar_index)
-    box.set_right(riskBox, bar_index)
-    box.set_right(tp1Box, bar_index)
-
-    if not ctcActive and not tp1Hit and low <= tradeEntry - 6.0
-        ctcActive := true
-        slMovedThisBar := true
-        slStage := 1
-        tradeSL := tradeEntry
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "CTC  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_top(riskBox, tradeSL)
-
-    if targetLockPending and low <= lastTargetHit - rangeVal * slOffsetFactor
-        targetLockPending := false
-        slMovedThisBar := true
-        slStage := 3
-        tradeSL := lastTargetHit
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_top(riskBox, tradeSL)
-
-    for targetStep = 0 to 18
-        if shortActive and not na(tradeTP1) and low <= tradeTP1
-            float hitPrice = tradeTP1
-            int hitNumber = currentTargetNumber
-            tp1Hit := true
-            slMovedThisBar := true
-            slStage := 2
-            lastTargetHit := hitPrice
-            targetLockPending := true
-            tradeSL := hitPrice + rangeVal * slOffsetFactor
-            line.set_y1(slLine, tradeSL)
-            line.set_y2(slLine, tradeSL)
-            label.set_y(slLabel, tradeSL)
-            label.set_text(slLabel, "TRAIL TP" + str.tostring(hitNumber) + "  " + str.tostring(tradeSL, format.mintick))
-            label.set_color(slLabel, color.orange)
-            box.set_top(riskBox, tradeSL)
-
-            string bookingText = hitNumber == 1 ? " — BOOK 50%" : hitNumber == 2 ? " — BOOK 80%" : ""
-            label.new(bar_index, hitPrice, "✓ TP" + str.tostring(hitNumber) + " HIT" + bookingText,
-                 style=label.style_label_left, color=color.green, textcolor=color.white, size=size.small)
-
-            int nextIndex = na
-            if currentTargetIndex > 0
-                for x = 0 to currentTargetIndex - 1
-                    int i = currentTargetIndex - 1 - x
-                    if na(nextIndex) and not na(array.get(levels, i))
-                        nextIndex := i
-
-            if na(nextIndex)
-                collapseTradeMap("SELL, FINAL TP" + str.tostring(hitNumber), color.green, hitPrice)
-                blockedLevelIndex := na
-                blockedDirection := 0
-                shortActive := false
-            else
-                currentTargetIndex := nextIndex
-                currentTargetNumber += 1
-                tradeTP1 := array.get(levels, nextIndex)
-                line.set_y1(tp1Line, tradeTP1)
-                line.set_y2(tp1Line, tradeTP1)
-                label.set_y(tp1Label, tradeTP1)
-                label.set_text(tp1Label, "TP" + str.tostring(currentTargetNumber) + "  " + str.tostring(tradeTP1, format.mintick))
-                box.set_bottom(tp1Box, tradeTP1)
-
-    if shortActive and targetLockPending and low <= lastTargetHit - rangeVal * slOffsetFactor
-        targetLockPending := false
-        slMovedThisBar := true
-        slStage := 3
-        tradeSL := lastTargetHit
-        line.set_y1(slLine, tradeSL)
-        line.set_y2(slLine, tradeSL)
-        label.set_y(slLabel, tradeSL)
-        label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
-        label.set_color(slLabel, color.orange)
-        box.set_top(riskBox, tradeSL)
-
-    if shortActive and high >= tradeSL and not slMovedThisBar
-        collapseTradeMap(slStage == 0 ? "SELL, SL HIT" : slStage == 1 ? "SELL, CTC" : "SELL, TRAIL SL", slStage == 0 ? color.red : color.orange, tradeSL)
-        if not tp1Hit
-            blockedLevelIndex := activeLevelIndex
-            blockedDirection := -1
-        else
-            blockedLevelIndex := na
-            blockedDirection := 0
-        shortActive := false
-
-//────────────────────────────────────────────
-// FIND BUY SETUP
-//────────────────────────────────────────────
-int buyIndex = na
-
-// Merely reaching any other range level also refreshes the blocked level.
-if isSignalTF and not longActive and not shortActive and not na(blockedLevelIndex)
-    bool touchedAnotherLevel = false
-    for i = 0 to 18
-        lvl = array.get(levels, i)
-        if i != blockedLevelIndex and low <= lvl and high >= lvl
-            touchedAnotherLevel := true
-
-    if touchedAnotherLevel
-        blockedLevelIndex := na
-        blockedDirection := 0
-
-if isSignalTF and not longActive and not shortActive
-
-    for x = 0 to 18
-
-        i = 18 - x
-        lvl = array.get(levels, i)
-
-        fromAbove = close[1] > lvl
-        touched   = low <= lvl
-        closedAbove = close > lvl
-
-        // If this level's last failed trade was SELL, only another SELL is
-        // allowed here until TP or a signal from another level refreshes it.
-        buyBlocked = i == blockedLevelIndex and blockedDirection == -1
-
-        if fromAbove and touched and closedAbove and not buyBlocked and na(buyIndex)
-
-            buyIndex := i
-
-//────────────────────────────────────────────
-// FIND SELL SETUP
-//────────────────────────────────────────────
-int sellIndex = na
-
-if isSignalTF and not longActive and not shortActive
-
-    for i = 0 to 18
-
-        lvl = array.get(levels, i)
-
-        fromBelow = close[1] < lvl
-        touched   = high >= lvl
-        closedBelow = close < lvl
-
-        // If this level's last failed trade was BUY, only another BUY is
-        // allowed here until TP or a signal from another level refreshes it.
-        sellBlocked = i == blockedLevelIndex and blockedDirection == 1
-
-        if fromBelow and touched and closedBelow and not sellBlocked and na(sellIndex)
-
-            sellIndex := i
-
-// Don't create BUY + SELL same candle
-if not na(buyIndex) and not na(sellIndex)
-
-    buyIndex  := na
-    sellIndex := na
-
-longSignal  = not na(buyIndex)
-shortSignal = not na(sellIndex)
-
-//────────────────────────────────────────────
-// CREATE LONG TRADE
-//────────────────────────────────────────────
-if longSignal
-
-    // A valid setup from another level refreshes the old blocked level.
-    if not na(blockedLevelIndex) and buyIndex != blockedLevelIndex
-        blockedLevelIndex := na
-        blockedDirection := 0
-
-    float nextTP1 = na
-    float nextTP2 = na
-    int nextTP1Index = na
-    int targetCandidateNumber = 0
-
-    // Count targets from the rejected level, not from the entry candle's close.
-    if buyIndex < 18
-        for i = buyIndex + 1 to 18
-            lvl = array.get(levels, i)
-
-            if not na(lvl)
-                targetCandidateNumber += 1
-                bool useAsTP1 = lowRangeMode ? targetCandidateNumber == 2 : targetCandidateNumber == 1
-                bool useAsTP2 = lowRangeMode ? targetCandidateNumber == 3 : targetCandidateNumber == 2
-
-                if useAsTP1
-                    nextTP1 := lvl
-                    nextTP1Index := i
-
-                else if useAsTP2
-                    nextTP2 := lvl
-
-    float plannedLongSL = array.get(levels, buyIndex) - rangeVal * slOffsetFactor
-    float plannedLongRisk = math.abs(close - plannedLongSL)
-    float plannedLongReward = not na(nextTP1) ? math.abs(nextTP1 - close) : na
-    float plannedLongRR = plannedLongRisk > 0 ? plannedLongReward / plannedLongRisk : na
-    bool validLongRR = not na(plannedLongRR) and plannedLongRR >= minimumTP1RewardRisk
-
-    if not na(nextTP1) and not validLongRR
-        label.new(
-             bar_index,
-             high,
-             "SL IS NOT MANAGEABLE HERE\nR:R " + str.tostring(plannedLongRR, "#.##"),
-             style=label.style_label_down,
-             color=color.orange,
-             textcolor=color.white,
-             size=size.small)
-
-    if not na(nextTP1) and validLongRR
-
-        // Keep completed trade maps visible in chart history
-        tp2Line := na
-        tp2Label := na
-        tp2Box := na
-
-        tradeEntry := close
-
-        // SL is halfway through one 25% interval from the rejected level
-        tradeSL := plannedLongSL
-
-        tradeTP1 := nextTP1
-        tradeTP2 := na
-
-        // Start the rolling TP sequence from the selected TP1 level.
-        currentTargetNumber := 1
-        currentTargetIndex := nextTP1Index
-        lastTargetHit := na
-        targetLockPending := false
-
-        tp1Hit := false
-        tp2Hit := false
-        ctcActive := false
-        slStage := 0
-
-        tradeStartBar := bar_index
-        activeLevelIndex := buyIndex
-        longActive := true
-
-        //────────────────────────
-        // ENTRY
-        //────────────────────────
-        entryLine := line.new(
-             bar_index,
-             tradeEntry,
-             bar_index + 1,
-             tradeEntry,
-             color=color.blue,
-             width=2)
-
-        entryLabel := label.new(
-             bar_index,
-             tradeEntry,
-             "BUY  " +
-             str.tostring(tradeEntry, format.mintick),
-             style=label.style_label_left,
-             color=color.blue,
-             textcolor=color.white)
-
-        //────────────────────────
-        // SL
-        //────────────────────────
-        slLine := line.new(
-             bar_index,
-             tradeSL,
-             bar_index + 1,
-             tradeSL,
-             color=color.red,
-             width=2)
-
-        slLabel := label.new(
-             bar_index,
-             tradeSL,
-             "SL  " +
-             str.tostring(tradeSL, format.mintick),
-             style=label.style_label_left,
-             color=color.red,
-             textcolor=color.white)
-
-        //────────────────────────
-        // TP1
-        //────────────────────────
-        tp1Line := line.new(
-             bar_index,
-             tradeTP1,
-             bar_index + 1,
-             tradeTP1,
-             color=color.green,
-             width=2)
-
-        tp1Label := label.new(
-             bar_index,
-             tradeTP1,
-             "TP1  " +
-             str.tostring(tradeTP1, format.mintick),
-             style=label.style_label_left,
-             color=color.green,
-             textcolor=color.white)
-
-        //────────────────────────
-        // BACKGROUND ZONES
-        //────────────────────────
-
-        // Risk zone
-        riskBox := box.new(
-             bar_index,
-             tradeEntry,
-             bar_index + 1,
-             tradeSL,
-             bgcolor=color.new(color.red, 88),
-             border_color=color.new(color.red, 70))
-
-        // Entry → TP1
-        tp1Box := box.new(
-             bar_index,
-             tradeTP1,
-             bar_index + 1,
-             tradeEntry,
-             bgcolor=color.new(color.green, 90),
-             border_color=color.new(color.green, 70))
-
-//────────────────────────────────────────────
-// CREATE SHORT TRADE
-//────────────────────────────────────────────
-if shortSignal
-
-    // A valid setup from another level refreshes the old blocked level.
-    if not na(blockedLevelIndex) and sellIndex != blockedLevelIndex
-        blockedLevelIndex := na
-        blockedDirection := 0
-
-    float nextTP1 = na
-    float nextTP2 = na
-    int nextTP1Index = na
-    int targetCandidateNumber = 0
-
-    // Count targets from the rejected level, not from the entry candle's close.
-    if sellIndex > 0
-        for x = 0 to sellIndex - 1
-            i = sellIndex - 1 - x
-            lvl = array.get(levels, i)
-
-            if not na(lvl)
-                targetCandidateNumber += 1
-                bool useAsTP1 = lowRangeMode ? targetCandidateNumber == 2 : targetCandidateNumber == 1
-                bool useAsTP2 = lowRangeMode ? targetCandidateNumber == 3 : targetCandidateNumber == 2
-
-                if useAsTP1
-                    nextTP1 := lvl
-                    nextTP1Index := i
-
-                else if useAsTP2
-                    nextTP2 := lvl
-
-    float plannedShortSL = array.get(levels, sellIndex) + rangeVal * slOffsetFactor
-    float plannedShortRisk = math.abs(plannedShortSL - close)
-    float plannedShortReward = not na(nextTP1) ? math.abs(close - nextTP1) : na
-    float plannedShortRR = plannedShortRisk > 0 ? plannedShortReward / plannedShortRisk : na
-    bool validShortRR = not na(plannedShortRR) and plannedShortRR >= minimumTP1RewardRisk
-
-    if not na(nextTP1) and not validShortRR
-        label.new(
-             bar_index,
-             low,
-             "SL IS NOT MANAGEABLE HERE\nR:R " + str.tostring(plannedShortRR, "#.##"),
-             style=label.style_label_up,
-             color=color.orange,
-             textcolor=color.white,
-             size=size.small)
-
-    if not na(nextTP1) and validShortRR
-
-        // Keep completed trade maps visible in chart history
-        tp2Line := na
-        tp2Label := na
-        tp2Box := na
-
-        tradeEntry := close
-
-        // SL is halfway through one 25% interval from the rejected level
-        tradeSL := plannedShortSL
-
-        tradeTP1 := nextTP1
-        tradeTP2 := na
-
-        // Start the rolling TP sequence from the selected TP1 level.
-        currentTargetNumber := 1
-        currentTargetIndex := nextTP1Index
-        lastTargetHit := na
-        targetLockPending := false
-
-        tp1Hit := false
-        tp2Hit := false
-        ctcActive := false
-        slStage := 0
-
-        tradeStartBar := bar_index
-        activeLevelIndex := sellIndex
-        shortActive := true
-
-        // ENTRY
-        entryLine := line.new(
-             bar_index,
-             tradeEntry,
-             bar_index + 1,
-             tradeEntry,
-             color=color.blue,
-             width=2)
-
-        entryLabel := label.new(
-             bar_index,
-             tradeEntry,
-             "SELL  " +
-             str.tostring(tradeEntry, format.mintick),
-             style=label.style_label_left,
-             color=color.blue,
-             textcolor=color.white)
-
-        // SL
-        slLine := line.new(
-             bar_index,
-             tradeSL,
-             bar_index + 1,
-             tradeSL,
-             color=color.red,
-             width=2)
-
-        slLabel := label.new(
-             bar_index,
-             tradeSL,
-             "SL  " +
-             str.tostring(tradeSL, format.mintick),
-             style=label.style_label_left,
-             color=color.red,
-             textcolor=color.white)
-
-        // TP1
-        tp1Line := line.new(
-             bar_index,
-             tradeTP1,
-             bar_index + 1,
-             tradeTP1,
-             color=color.green,
-             width=2)
-
-        tp1Label := label.new(
-             bar_index,
-             tradeTP1,
-             "TP1  " +
-             str.tostring(tradeTP1, format.mintick),
-             style=label.style_label_left,
-             color=color.green,
-             textcolor=color.white)
-
-        // BACKGROUND — RISK
-        riskBox := box.new(
-             bar_index,
-             tradeSL,
-             bar_index + 1,
-             tradeEntry,
-             bgcolor=color.new(color.red, 88),
-             border_color=color.new(color.red, 70))
-
-        // ENTRY → TP1
-        tp1Box := box.new(
-             bar_index,
-             tradeEntry,
-             bar_index + 1,
-             tradeTP1,
-             bgcolor=color.new(color.green, 90),
-             border_color=color.new(color.green, 70))
-
-//────────────────────────────────────────────
-// SIGNAL MARKERS
-//────────────────────────────────────────────
-plotshape(
-     longSignal and longActive and tradeStartBar == bar_index,
-     title="BUY",
-     location=location.belowbar,
-     style=shape.triangleup,
-     color=color.lime,
-     size=size.small,
-     text="BUY")
-
-plotshape(
-     shortSignal and shortActive and tradeStartBar == bar_index,
-     title="SELL",
-     location=location.abovebar,
-     style=shape.triangledown,
-     color=color.red,
-     size=size.small,
-     text="SELL")
+**    if not na(slLabel)**
