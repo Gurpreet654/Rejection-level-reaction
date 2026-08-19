@@ -51,7 +51,21 @@ previousDayLow = request.security(
      lookahead=barmerge.lookahead_on)
 previousDayPriceRange = previousDayHigh - previousDayLow
 previousDayRange = previousDayPriceRange * 100
-lowRangeMode = previousDayPriceRange < previousDayRangeThreshold
+
+// Freeze all range-source data on the selected opening candle. Vantage's
+// current daily VIX bar can begin later than the selected market opening; using
+// its live series directly would recalculate rangeVal and make every level jump.
+isSelectedOpeningBar = time <= openingTime and time_close > openingTime
+var float fixedVIXOpening = na
+var float fixedPreviousDayPriceRange = na
+var float fixedPreviousDayRange = na
+
+if isSelectedOpeningBar
+    fixedVIXOpening := GVZopenA
+    fixedPreviousDayPriceRange := previousDayPriceRange
+    fixedPreviousDayRange := previousDayRange
+
+lowRangeMode = fixedPreviousDayPriceRange < previousDayRangeThreshold
 slOffsetFactor = lowRangeMode ? 0.25 : 0.125
 // After TP1, every trailing step is always 12.5% in both range modes.
 trailingOffsetFactor = 0.125
@@ -59,7 +73,7 @@ rangeSource = input.string(
      "Volatility Index",
      "Range Source",
      options=["Volatility Index", "Previous Day Range"])
-GVZopen = rangeSource == "Volatility Index" ? GVZopenA : previousDayRange
+GVZopen = rangeSource == "Volatility Index" ? fixedVIXOpening : fixedPreviousDayRange
 
 
 //────────────────────────────────────────────
@@ -76,9 +90,9 @@ var table rangeInfo = table.new(
      frame_width=1)
 if barstate.islast
     table.cell(rangeInfo, 0, 0, "VIX opening", text_color=color.white)
-    table.cell(rangeInfo, 1, 0, str.tostring(GVZopenA, "#.###"), text_color=color.aqua)
+    table.cell(rangeInfo, 1, 0, str.tostring(fixedVIXOpening, "#.###"), text_color=color.aqua)
     table.cell(rangeInfo, 0, 1, "Previous H-L ($)", text_color=color.white)
-    table.cell(rangeInfo, 1, 1, str.tostring(previousDayPriceRange*100, format.mintick), text_color=color.aqua)
+    table.cell(rangeInfo, 1, 1, str.tostring(fixedPreviousDayPriceRange*100, format.mintick), text_color=color.aqua)
 //────────────────────────────────────────────
 // LEVELS
 //────────────────────────────────────────────
@@ -102,13 +116,11 @@ U425 = openPrice + rangeVal * 4.25
 U450 = openPrice + rangeVal * 4.50
 U475 = openPrice + rangeVal * 4.75
 U500 = openPrice + rangeVal * 5.00
-
 // Reveal the next 100% band only after a candle closes beyond the prior 100%.
 var bool upperBand1Active = false
 var bool upperBand2Active = false
 var bool upperBand3Active = false
 var bool upperBand4Active = false
-
 if not na(U100) and close > U100
     upperBand1Active := true
 if not na(U200) and close > U200
@@ -137,12 +149,10 @@ D425 = openPrice - rangeVal * 4.25
 D450 = openPrice - rangeVal * 4.50
 D475 = openPrice - rangeVal * 4.75
 D500 = openPrice - rangeVal * 5.00
-
 var bool lowerBand1Active = false
 var bool lowerBand2Active = false
 var bool lowerBand3Active = false
 var bool lowerBand4Active = false
-
 if not na(D100) and close < D100
     lowerBand1Active := true
 if not na(D200) and close < D200
@@ -241,7 +251,6 @@ array.set(levels, 37, upperBand4Active ? U425 : na)
 array.set(levels, 38, upperBand4Active ? U450 : na)
 array.set(levels, 39, upperBand4Active ? U475 : na)
 array.set(levels, 40, upperBand4Active ? U500 : na)
-
 lastLevelIndex = array.size(levels) - 1
 //────────────────────────────────────────────
 // SELECTED SIGNAL TIMEFRAME: 3M OR 5M
@@ -287,7 +296,6 @@ var float capturedDollars = 0.0
 var int activeLevelIndex = na
 var int blockedLevelIndex = na
 var int blockedDirection  = 0
-
 // A setup rejected only because of poor R:R remains pending at its rejection
 // level. Direction: 1 = pending BUY, -1 = pending SELL, 0 = none.
 var int pendingRRDirection = 0
@@ -576,7 +584,6 @@ if shortActive
 int buyIndex = na
 int sellIndex = na
 bool canCreateNewSignal = na(lastTradeExitBar) or bar_index > lastTradeExitBar
-
 // Recheck a poor-R:R setup on later candles. It survives a close through the
 // rejection level and expires only after price reaches the next range level on
 // either side. The crossing candle that first created the pending setup is not
@@ -585,23 +592,18 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
     float pendingLevel = array.get(levels, pendingRRLevelIndex)
     float lowerBoundary = na
     float upperBoundary = na
-
     for step = 1 to lastLevelIndex
         int lowerIndex = pendingRRLevelIndex - step
         int upperIndex = pendingRRLevelIndex + step
-
         if na(lowerBoundary) and lowerIndex >= 0
             float lowerCandidate = array.get(levels, lowerIndex)
             if not na(lowerCandidate)
                 lowerBoundary := lowerCandidate
-
         if na(upperBoundary) and upperIndex <= lastLevelIndex
             float upperCandidate = array.get(levels, upperIndex)
             if not na(upperCandidate)
                 upperBoundary := upperCandidate
-
     bool pendingBoundaryTouched = (not na(lowerBoundary) and low <= lowerBoundary) or (not na(upperBoundary) and high >= upperBoundary)
-
     if pendingBoundaryTouched
         pendingRRDirection := 0
         pendingRRLevelIndex := na
@@ -610,17 +612,14 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
         bool longTouchedLevel = low <= pendingLevel
         bool longRetracedToward = low < low[1]
         bool longReclaimedLevel = close[1] <= pendingLevel and close > pendingLevel
-
         if close > pendingLevel and (longTouchedLevel or longRetracedToward or longReclaimedLevel)
             buyIndex := pendingRRLevelIndex
     else
         bool shortTouchedLevel = high >= pendingLevel
         bool shortRetracedToward = high > high[1]
         bool shortReclaimedLevel = close[1] >= pendingLevel and close < pendingLevel
-
         if close < pendingLevel and (shortTouchedLevel or shortRetracedToward or shortReclaimedLevel)
             sellIndex := pendingRRLevelIndex
-
 // Merely reaching any other range level also refreshes the blocked level.
 if isSignalTF and not longActive and not shortActive and not na(blockedLevelIndex)
     bool touchedAnotherLevel = false
@@ -696,15 +695,14 @@ if longSignal
         pendingRRDirection := 1
         pendingRRLevelIndex := buyIndex
         pendingRRStartBar := isNewPendingLong ? bar_index : pendingRRStartBar
-
         if isNewPendingLong
             label.new(
                  bar_index,
                  high,
                  "WAIT BUY — SL ⛔\nR:R " + str.tostring(plannedLongRR, "#.##"),
                  style=label.style_label_down,
-                 color=color.gray,
-                 textcolor=color.white,
+                 color=color.white,
+                 textcolor=color.green,
                  size=size.small)
     if not na(nextTP1) and validLongRR
         pendingRRDirection := 0
@@ -840,15 +838,14 @@ if shortSignal
         pendingRRDirection := -1
         pendingRRLevelIndex := sellIndex
         pendingRRStartBar := isNewPendingShort ? bar_index : pendingRRStartBar
-
         if isNewPendingShort
             label.new(
                  bar_index,
                  low,
                  "WAIT SELL — SL ⛔\nR:R " + str.tostring(plannedShortRR, "#.##"),
                  style=label.style_label_up,
-                 color=color.gray,
-                 textcolor=color.white,
+                 color=color.white,
+                 textcolor=color.red,
                  size=size.small)
     if not na(nextTP1) and validShortRR
         pendingRRDirection := 0
@@ -963,7 +960,7 @@ plotshape(
 // Counts use all trades processed from the selected opening onward.
 //────────────────────────────────────────────
 var table performanceInfo = table.new(
-     position.top_left, 2, 6,
+     position.bottom_right, 2, 6,
      bgcolor=color.new(color.black, 15),
      frame_color=color.gray,
      frame_width=1)
