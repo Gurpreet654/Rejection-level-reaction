@@ -1,5 +1,4 @@
 //@version=6
-// same as last one, description changed
 indicator("Opening Range Levels + 3M/5M Trade Map", overlay=true,
      max_lines_count=500, max_labels_count=500, max_boxes_count=500)
 //────────────────────────────────────────────
@@ -92,10 +91,32 @@ U150 = openPrice + rangeVal * 1.50
 U175 = openPrice + rangeVal * 1.75
 U200 = openPrice + rangeVal * 2.00
 U225 = openPrice + rangeVal * 2.25
-// Keep upside extensions hidden until price trades above +100%.
-var bool upperExtensionsActive = false
-if not upperExtensionsActive and not na(U100) and high > U100
-    upperExtensionsActive := true
+U250 = openPrice + rangeVal * 2.50
+U275 = openPrice + rangeVal * 2.75
+U300 = openPrice + rangeVal * 3.00
+U325 = openPrice + rangeVal * 3.25
+U350 = openPrice + rangeVal * 3.50
+U375 = openPrice + rangeVal * 3.75
+U400 = openPrice + rangeVal * 4.00
+U425 = openPrice + rangeVal * 4.25
+U450 = openPrice + rangeVal * 4.50
+U475 = openPrice + rangeVal * 4.75
+U500 = openPrice + rangeVal * 5.00
+
+// Reveal the next 100% band only after a candle closes beyond the prior 100%.
+var bool upperBand1Active = false
+var bool upperBand2Active = false
+var bool upperBand3Active = false
+var bool upperBand4Active = false
+
+if not na(U100) and close > U100
+    upperBand1Active := true
+if not na(U200) and close > U200
+    upperBand2Active := true
+if not na(U300) and close > U300
+    upperBand3Active := true
+if not na(U400) and close > U400
+    upperBand4Active := true
 D25  = openPrice - rangeVal * 0.25
 D50  = openPrice - rangeVal * 0.50
 D75  = openPrice - rangeVal * 0.75
@@ -105,10 +126,31 @@ D150 = openPrice - rangeVal * 1.50
 D175 = openPrice - rangeVal * 1.75
 D200 = openPrice - rangeVal * 2.00
 D225 = openPrice - rangeVal * 2.25
-// Keep downside extensions hidden until price trades below -100%.
-var bool lowerExtensionsActive = false
-if not lowerExtensionsActive and not na(D100) and low < D100
-    lowerExtensionsActive := true
+D250 = openPrice - rangeVal * 2.50
+D275 = openPrice - rangeVal * 2.75
+D300 = openPrice - rangeVal * 3.00
+D325 = openPrice - rangeVal * 3.25
+D350 = openPrice - rangeVal * 3.50
+D375 = openPrice - rangeVal * 3.75
+D400 = openPrice - rangeVal * 4.00
+D425 = openPrice - rangeVal * 4.25
+D450 = openPrice - rangeVal * 4.50
+D475 = openPrice - rangeVal * 4.75
+D500 = openPrice - rangeVal * 5.00
+
+var bool lowerBand1Active = false
+var bool lowerBand2Active = false
+var bool lowerBand3Active = false
+var bool lowerBand4Active = false
+
+if not na(D100) and close < D100
+    lowerBand1Active := true
+if not na(D200) and close < D200
+    lowerBand2Active := true
+if not na(D300) and close < D300
+    lowerBand3Active := true
+if not na(D400) and close < D400
+    lowerBand4Active := true
 //────────────────────────────────────────────
 // MAIN LEVEL PLOTS
 //────────────────────────────────────────────
@@ -117,50 +159,96 @@ plot(U25, "+25%", color=color.green)
 plot(U50, "+50%", color=color.green)
 plot(U75, "+75%", color=color.green)
 plot(U100, "+100%", color=color.green)
-plot(upperExtensionsActive ? U125 : na, "+125%", color=color.aqua)
-plot(upperExtensionsActive ? U150 : na, "+150%", color=color.aqua)
-plot(upperExtensionsActive ? U175 : na, "+175%", color=color.aqua)
-plot(upperExtensionsActive ? U200 : na, "+200%", color=color.aqua)
-plot(upperExtensionsActive ? U225 : na, "+225%", color=color.aqua)
+plot(upperBand1Active ? U125 : na, "+125%", color=color.aqua)
+plot(upperBand1Active ? U150 : na, "+150%", color=color.aqua)
+plot(upperBand1Active ? U175 : na, "+175%", color=color.aqua)
+plot(upperBand1Active ? U200 : na, "+200%", color=color.aqua)
+plot(upperBand2Active ? U225 : na, "+225%", color=color.blue)
+plot(upperBand2Active ? U250 : na, "+250%", color=color.blue)
+plot(upperBand2Active ? U275 : na, "+275%", color=color.blue)
+plot(upperBand2Active ? U300 : na, "+300%", color=color.blue)
+plot(upperBand3Active ? U325 : na, "+325%", color=color.aqua)
+plot(upperBand3Active ? U350 : na, "+350%", color=color.aqua)
+plot(upperBand3Active ? U375 : na, "+375%", color=color.aqua)
+plot(upperBand3Active ? U400 : na, "+400%", color=color.aqua)
+plot(upperBand4Active ? U425 : na, "+425%", color=color.blue)
+plot(upperBand4Active ? U450 : na, "+450%", color=color.blue)
+plot(upperBand4Active ? U475 : na, "+475%", color=color.blue)
+plot(upperBand4Active ? U500 : na, "+500%", color=color.blue)
 plot(D25, "-25%", color=color.red)
 plot(D50, "-50%", color=color.red)
 plot(D75, "-75%", color=color.red)
 plot(D100, "-100%", color=color.red)
-plot(lowerExtensionsActive ? D125 : na, "-125%", color=color.orange)
-plot(lowerExtensionsActive ? D150 : na, "-150%", color=color.orange)
-plot(lowerExtensionsActive ? D175 : na, "-175%", color=color.orange)
-plot(lowerExtensionsActive ? D200 : na, "-200%", color=color.orange)
-plot(lowerExtensionsActive ? D225 : na, "-225%", color=color.orange)
+plot(lowerBand1Active ? D125 : na, "-125%", color=color.orange)
+plot(lowerBand1Active ? D150 : na, "-150%", color=color.orange)
+plot(lowerBand1Active ? D175 : na, "-175%", color=color.orange)
+plot(lowerBand1Active ? D200 : na, "-200%", color=color.orange)
+plot(lowerBand2Active ? D225 : na, "-225%", color=color.purple)
+plot(lowerBand2Active ? D250 : na, "-250%", color=color.purple)
+plot(lowerBand2Active ? D275 : na, "-275%", color=color.purple)
+plot(lowerBand2Active ? D300 : na, "-300%", color=color.purple)
+plot(lowerBand3Active ? D325 : na, "-325%", color=color.orange)
+plot(lowerBand3Active ? D350 : na, "-350%", color=color.orange)
+plot(lowerBand3Active ? D375 : na, "-375%", color=color.orange)
+plot(lowerBand3Active ? D400 : na, "-400%", color=color.orange)
+plot(lowerBand4Active ? D425 : na, "-425%", color=color.purple)
+plot(lowerBand4Active ? D450 : na, "-450%", color=color.purple)
+plot(lowerBand4Active ? D475 : na, "-475%", color=color.purple)
+plot(lowerBand4Active ? D500 : na, "-500%", color=color.purple)
 //────────────────────────────────────────────
 // LEVEL ARRAY
 // LOWEST → HIGHEST
 //────────────────────────────────────────────
-var levels = array.new_float(19)
-array.set(levels, 0, lowerExtensionsActive ? D225 : na)
-array.set(levels, 1, lowerExtensionsActive ? D200 : na)
-array.set(levels, 2, lowerExtensionsActive ? D175 : na)
-array.set(levels, 3, lowerExtensionsActive ? D150 : na)
-array.set(levels, 4, lowerExtensionsActive ? D125 : na)
-array.set(levels, 5, D100)
-array.set(levels, 6, D75)
-array.set(levels, 7, D50)
-array.set(levels, 8, D25)
-array.set(levels, 9, openPrice)
-array.set(levels, 10, U25)
-array.set(levels, 11, U50)
-array.set(levels, 12, U75)
-array.set(levels, 13, U100)
-array.set(levels, 14, upperExtensionsActive ? U125 : na)
-array.set(levels, 15, upperExtensionsActive ? U150 : na)
-array.set(levels, 16, upperExtensionsActive ? U175 : na)
-array.set(levels, 17, upperExtensionsActive ? U200 : na)
-array.set(levels, 18, upperExtensionsActive ? U225 : na)
+var levels = array.new_float(41)
+array.set(levels, 0, lowerBand4Active ? D500 : na)
+array.set(levels, 1, lowerBand4Active ? D475 : na)
+array.set(levels, 2, lowerBand4Active ? D450 : na)
+array.set(levels, 3, lowerBand4Active ? D425 : na)
+array.set(levels, 4, lowerBand3Active ? D400 : na)
+array.set(levels, 5, lowerBand3Active ? D375 : na)
+array.set(levels, 6, lowerBand3Active ? D350 : na)
+array.set(levels, 7, lowerBand3Active ? D325 : na)
+array.set(levels, 8, lowerBand2Active ? D300 : na)
+array.set(levels, 9, lowerBand2Active ? D275 : na)
+array.set(levels, 10, lowerBand2Active ? D250 : na)
+array.set(levels, 11, lowerBand2Active ? D225 : na)
+array.set(levels, 12, lowerBand1Active ? D200 : na)
+array.set(levels, 13, lowerBand1Active ? D175 : na)
+array.set(levels, 14, lowerBand1Active ? D150 : na)
+array.set(levels, 15, lowerBand1Active ? D125 : na)
+array.set(levels, 16, D100)
+array.set(levels, 17, D75)
+array.set(levels, 18, D50)
+array.set(levels, 19, D25)
+array.set(levels, 20, openPrice)
+array.set(levels, 21, U25)
+array.set(levels, 22, U50)
+array.set(levels, 23, U75)
+array.set(levels, 24, U100)
+array.set(levels, 25, upperBand1Active ? U125 : na)
+array.set(levels, 26, upperBand1Active ? U150 : na)
+array.set(levels, 27, upperBand1Active ? U175 : na)
+array.set(levels, 28, upperBand1Active ? U200 : na)
+array.set(levels, 29, upperBand2Active ? U225 : na)
+array.set(levels, 30, upperBand2Active ? U250 : na)
+array.set(levels, 31, upperBand2Active ? U275 : na)
+array.set(levels, 32, upperBand2Active ? U300 : na)
+array.set(levels, 33, upperBand3Active ? U325 : na)
+array.set(levels, 34, upperBand3Active ? U350 : na)
+array.set(levels, 35, upperBand3Active ? U375 : na)
+array.set(levels, 36, upperBand3Active ? U400 : na)
+array.set(levels, 37, upperBand4Active ? U425 : na)
+array.set(levels, 38, upperBand4Active ? U450 : na)
+array.set(levels, 39, upperBand4Active ? U475 : na)
+array.set(levels, 40, upperBand4Active ? U500 : na)
+
+lastLevelIndex = array.size(levels) - 1
 //────────────────────────────────────────────
 // SELECTED SIGNAL TIMEFRAME: 3M OR 5M
 //────────────────────────────────────────────
 isSignalTF = timeframe.isminutes and timeframe.multiplier == signalMinutes
-// Do not permit new signals during the first 20 minutes after the selected
-// market opening. The first eligible signal candle must open at or after +20.
+// Do not permit new signals during the first 30 minutes after the selected
+// market opening. The first eligible signal candle must open at or after +30.
 entryCutoffTime = openingTime + 30 * 60 * 1000
 entryWindowOpen = time >= entryCutoffTime
 //────────────────────────────────────────────
@@ -182,6 +270,8 @@ var int currentTargetNumber = 1
 var int currentTargetIndex = na
 var float lastTargetHit = na
 var bool targetLockPending = false
+// Prevent a completed trade's exit candle from also creating a new entry.
+var int lastTradeExitBar = na
 //────────────────────────────────────────────
 // PERFORMANCE COUNTERS
 // $1.00 movement in gold = 10 pips for this indicator.
@@ -307,7 +397,7 @@ if longActive
         label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
         label.set_color(slLabel, color.orange)
         box.set_bottom(riskBox, tradeSL)
-    for targetStep = 0 to 18
+    for targetStep = 0 to lastLevelIndex
         if longActive and not na(tradeTP1) and high >= tradeTP1
             float hitPrice = tradeTP1
             int hitNumber = currentTargetNumber
@@ -329,12 +419,13 @@ if longActive
             label.new(bar_index, hitPrice, "✓ TP" + str.tostring(hitNumber) + " HIT" + bookingText,
                  style=label.style_label_left, color=color.green, textcolor=color.white, size=size.small)
             int nextIndex = na
-            if currentTargetIndex < 18
-                for i = currentTargetIndex + 1 to 18
+            if currentTargetIndex < lastLevelIndex
+                for i = currentTargetIndex + 1 to lastLevelIndex
                     if na(nextIndex) and not na(array.get(levels, i))
                         nextIndex := i
             if na(nextIndex)
                 collapseTradeMap("BUY, FINAL TP" + str.tostring(hitNumber), color.green, hitPrice)
+                lastTradeExitBar := bar_index
                 capturedDollars += hitPrice - tradeEntry
                 completedTrades += 1
                 blockedLevelIndex := na
@@ -362,6 +453,7 @@ if longActive
         box.set_bottom(riskBox, tradeSL)
     if longActive and low <= tradeSL and not slMovedThisBar
         collapseTradeMap(slStage == 0 ? "BUY, SL HIT" : slStage == 1 ? "BUY, CTC" : "BUY, TRAIL SL", slStage == 0 ? color.red : color.orange, tradeSL)
+        lastTradeExitBar := bar_index
         capturedDollars += tradeSL - tradeEntry
         completedTrades += 1
         if slStage == 0
@@ -407,7 +499,7 @@ if shortActive
         label.set_text(slLabel, "SL AT TP" + str.tostring(currentTargetNumber - 1) + "  " + str.tostring(tradeSL, format.mintick))
         label.set_color(slLabel, color.orange)
         box.set_top(riskBox, tradeSL)
-    for targetStep = 0 to 18
+    for targetStep = 0 to lastLevelIndex
         if shortActive and not na(tradeTP1) and low <= tradeTP1
             float hitPrice = tradeTP1
             int hitNumber = currentTargetNumber
@@ -436,6 +528,7 @@ if shortActive
                         nextIndex := i
             if na(nextIndex)
                 collapseTradeMap("SELL, FINAL TP" + str.tostring(hitNumber), color.green, hitPrice)
+                lastTradeExitBar := bar_index
                 capturedDollars += tradeEntry - hitPrice
                 completedTrades += 1
                 blockedLevelIndex := na
@@ -463,6 +556,7 @@ if shortActive
         box.set_top(riskBox, tradeSL)
     if shortActive and high >= tradeSL and not slMovedThisBar
         collapseTradeMap(slStage == 0 ? "SELL, SL HIT" : slStage == 1 ? "SELL, CTC" : "SELL, TRAIL SL", slStage == 0 ? color.red : color.orange, tradeSL)
+        lastTradeExitBar := bar_index
         capturedDollars += tradeEntry - tradeSL
         completedTrades += 1
         if slStage == 0
@@ -481,17 +575,18 @@ if shortActive
 //────────────────────────────────────────────
 int buyIndex = na
 int sellIndex = na
+bool canCreateNewSignal = na(lastTradeExitBar) or bar_index > lastTradeExitBar
 
 // Recheck a poor-R:R setup on later candles. It survives a close through the
 // rejection level and expires only after price reaches the next range level on
 // either side. The crossing candle that first created the pending setup is not
 // used for invalidation.
-if isSignalTF and entryWindowOpen and not longActive and not shortActive and pendingRRDirection != 0 and bar_index > pendingRRStartBar
+if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and not shortActive and pendingRRDirection != 0 and bar_index > pendingRRStartBar
     float pendingLevel = array.get(levels, pendingRRLevelIndex)
     float lowerBoundary = na
     float upperBoundary = na
 
-    for step = 1 to 18
+    for step = 1 to lastLevelIndex
         int lowerIndex = pendingRRLevelIndex - step
         int upperIndex = pendingRRLevelIndex + step
 
@@ -500,7 +595,7 @@ if isSignalTF and entryWindowOpen and not longActive and not shortActive and pen
             if not na(lowerCandidate)
                 lowerBoundary := lowerCandidate
 
-        if na(upperBoundary) and upperIndex <= 18
+        if na(upperBoundary) and upperIndex <= lastLevelIndex
             float upperCandidate = array.get(levels, upperIndex)
             if not na(upperCandidate)
                 upperBoundary := upperCandidate
@@ -529,16 +624,16 @@ if isSignalTF and entryWindowOpen and not longActive and not shortActive and pen
 // Merely reaching any other range level also refreshes the blocked level.
 if isSignalTF and not longActive and not shortActive and not na(blockedLevelIndex)
     bool touchedAnotherLevel = false
-    for i = 0 to 18
+    for i = 0 to lastLevelIndex
         lvl = array.get(levels, i)
         if i != blockedLevelIndex and low <= lvl and high >= lvl
             touchedAnotherLevel := true
     if touchedAnotherLevel
         blockedLevelIndex := na
         blockedDirection := 0
-if isSignalTF and entryWindowOpen and not longActive and not shortActive and pendingRRDirection == 0
-    for x = 0 to 18
-        i = 18 - x
+if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and not shortActive and pendingRRDirection == 0
+    for x = 0 to lastLevelIndex
+        i = lastLevelIndex - x
         lvl = array.get(levels, i)
         fromAbove = close[1] > lvl
         touched   = low <= lvl
@@ -549,8 +644,8 @@ if isSignalTF and entryWindowOpen and not longActive and not shortActive and pen
         if fromAbove and touched and closedAbove and not buyBlocked and na(buyIndex)
             buyIndex := i
 //────────────────────────────────────────────
-if isSignalTF and entryWindowOpen and not longActive and not shortActive and pendingRRDirection == 0
-    for i = 0 to 18
+if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and not shortActive and pendingRRDirection == 0
+    for i = 0 to lastLevelIndex
         lvl = array.get(levels, i)
         fromBelow = close[1] < lvl
         touched   = high >= lvl
@@ -579,8 +674,8 @@ if longSignal
     int nextTP1Index = na
     int targetCandidateNumber = 0
     // Count targets from the rejected level, not from the entry candle's close.
-    if buyIndex < 18
-        for i = buyIndex + 1 to 18
+    if buyIndex < lastLevelIndex
+        for i = buyIndex + 1 to lastLevelIndex
             lvl = array.get(levels, i)
             if not na(lvl)
                 targetCandidateNumber += 1
