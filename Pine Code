@@ -415,6 +415,20 @@ if longActive
         if longActive and not na(tradeTP1) and high >= tradeTP1
             float hitPrice = tradeTP1
             int hitNumber = currentTargetNumber
+            int hitLevelIndex = currentTargetIndex
+
+            // A long trade closing above its reached TP creates BUY bias at
+            // that TP, even though the breakout happened while trade was active.
+            if close > hitPrice
+                breakoutBiasLevelIndex := hitLevelIndex
+                breakoutBiasDirection := 1
+                breakoutBiasStartBar := bar_index
+            else if breakoutBiasDirection != 0 and breakoutBiasLevelIndex != hitLevelIndex
+                // Merely touching this different TP invalidates an older bias.
+                breakoutBiasLevelIndex := na
+                breakoutBiasDirection := 0
+                breakoutBiasStartBar := na
+
             if hitNumber == 1
                 tp1PlusTrades += 1
             tp1Hit := true
@@ -517,6 +531,20 @@ if shortActive
         if shortActive and not na(tradeTP1) and low <= tradeTP1
             float hitPrice = tradeTP1
             int hitNumber = currentTargetNumber
+            int hitLevelIndex = currentTargetIndex
+
+            // A short trade closing below its reached TP creates SELL bias at
+            // that TP, even though the breakdown happened while trade was active.
+            if close < hitPrice
+                breakoutBiasLevelIndex := hitLevelIndex
+                breakoutBiasDirection := -1
+                breakoutBiasStartBar := bar_index
+            else if breakoutBiasDirection != 0 and breakoutBiasLevelIndex != hitLevelIndex
+                // Merely touching this different TP invalidates an older bias.
+                breakoutBiasLevelIndex := na
+                breakoutBiasDirection := 0
+                breakoutBiasStartBar := na
+
             if hitNumber == 1
                 tp1PlusTrades += 1
             tp1Hit := true
