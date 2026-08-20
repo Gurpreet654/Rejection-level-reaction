@@ -295,6 +295,13 @@ var float capturedDollars = 0.0
 var int activeLevelIndex = na
 var int blockedLevelIndex = na
 var int blockedDirection  = 0
+
+// Direct-close level bias. After price closes through a range level, keep the
+// breakout direction at that level until any different range level is touched.
+// Direction: 1 = BUY bias, -1 = SELL bias, 0 = none.
+var int breakoutBiasLevelIndex = na
+var int breakoutBiasDirection = 0
+var int breakoutBiasStartBar = na
 // A setup rejected only because of poor R:R remains pending at its rejection
 // level. Direction: 1 = pending BUY, -1 = pending SELL, 0 = none.
 var int pendingRRDirection = 0
@@ -583,6 +590,57 @@ if shortActive
 int buyIndex = na
 int sellIndex = na
 bool canCreateNewSignal = na(lastTradeExitBar) or bar_index > lastTradeExitBar
+
+// Keep a direct-break bias even if price later closes back through the same
+// level. Only a touch of another visible range level invalidates it.
+if isSignalTF and breakoutBiasDirection != 0 and bar_index > breakoutBiasStartBar
+    bool biasTouchedAnotherLevel = false
+
+    for i = 0 to lastLevelIndex
+        float biasCheckLevel = array.get(levels, i)
+        if i != breakoutBiasLevelIndex and not na(biasCheckLevel) and low <= biasCheckLevel and high >= biasCheckLevel
+            biasTouchedAnotherLevel := true
+
+    if biasTouchedAnotherLevel
+        breakoutBiasLevelIndex := na
+        breakoutBiasDirection := 0
+        breakoutBiasStartBar := na
+
+// When no bias is active, record the highest level crossed upward or the
+// lowest level crossed downward by the candle close.
+if isSignalTF and not longActive and not shortActive and breakoutBiasDirection == 0
+    int upwardBreakIndex = na
+    int downwardBreakIndex = na
+
+    for i = 0 to lastLevelIndex
+        float breakoutLevel = array.get(levels, i)
+        if not na(breakoutLevel) and close[1] < breakoutLevel and close > breakoutLevel
+            upwardBreakIndex := i
+
+    for x = 0 to lastLevelIndex
+        int i = lastLevelIndex - x
+        float breakoutLevel = array.get(levels, i)
+        if not na(breakoutLevel) and close[1] > breakoutLevel and close < breakoutLevel
+            downwardBreakIndex := i
+
+    if not na(upwardBreakIndex)
+        breakoutBiasLevelIndex := upwardBreakIndex
+        breakoutBiasDirection := 1
+        breakoutBiasStartBar := bar_index
+
+        if pendingRRLevelIndex == upwardBreakIndex and pendingRRDirection == -1
+            pendingRRDirection := 0
+            pendingRRLevelIndex := na
+            pendingRRStartBar := na
+    else if not na(downwardBreakIndex)
+        breakoutBiasLevelIndex := downwardBreakIndex
+        breakoutBiasDirection := -1
+        breakoutBiasStartBar := bar_index
+
+        if pendingRRLevelIndex == downwardBreakIndex and pendingRRDirection == 1
+            pendingRRDirection := 0
+            pendingRRLevelIndex := na
+            pendingRRStartBar := na
 // Recheck a poor-R:R setup on later candles. It survives a close through the
 // rejection level and expires only after price reaches the next range level on
 // either side. The crossing candle that first created the pending setup is not
@@ -591,6 +649,7 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
     float pendingLevel = array.get(levels, pendingRRLevelIndex)
     float lowerBoundary = na
     float upperBoundary = na
+    bool pendingBlockedByBias = pendingRRLevelIndex == breakoutBiasLevelIndex and ((pendingRRDirection == 1 and breakoutBiasDirection == -1) or (pendingRRDirection == -1 and breakoutBiasDirection == 1))
     for step = 1 to lastLevelIndex
         int lowerIndex = pendingRRLevelIndex - step
         int upperIndex = pendingRRLevelIndex + step
@@ -604,6 +663,10 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
                 upperBoundary := upperCandidate
     bool pendingBoundaryTouched = (not na(lowerBoundary) and low <= lowerBoundary) or (not na(upperBoundary) and high >= upperBoundary)
     if pendingBoundaryTouched
+        pendingRRDirection := 0
+        pendingRRLevelIndex := na
+        pendingRRStartBar := na
+    else if pendingBlockedByBias
         pendingRRDirection := 0
         pendingRRLevelIndex := na
         pendingRRStartBar := na
@@ -638,7 +701,7 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
         closedAbove = close > lvl
         // If this level's last failed trade was SELL, only another SELL is
         // allowed here until TP or a signal from another level refreshes it.
-        buyBlocked = i == blockedLevelIndex and blockedDirection == -1
+        buyBlocked = (i == blockedLevelIndex and blockedDirection == -1) or (i == breakoutBiasLevelIndex and breakoutBiasDirection == -1)
         if fromAbove and touched and closedAbove and not buyBlocked and na(buyIndex)
             buyIndex := i
 //────────────────────────────────────────────
@@ -650,7 +713,7 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
         closedBelow = close < lvl
         // If this level's last failed trade was BUY, only another BUY is
         // allowed here until TP or a signal from another level refreshes it.
-        sellBlocked = i == blockedLevelIndex and blockedDirection == 1
+        sellBlocked = (i == blockedLevelIndex and blockedDirection == 1) or (i == breakoutBiasLevelIndex and breakoutBiasDirection == 1)
         if fromBelow and touched and closedBelow and not sellBlocked and na(sellIndex)
             sellIndex := i
 // Don't create BUY + SELL same candle
