@@ -31,6 +31,11 @@ minimumTP1RewardRisk = input.float(
      "Minimum TP1 Reward/Risk",
      minval=0.1,
      step=0.1)
+initialSLOffset = input.float(
+     0.625,
+     "Initial SL Offset ($)",
+     minval=0.001,
+     step=0.001)
 candles = signalMinutes == 5 ? 276 : 460
 // Capture the opening price internally from 5-minute data. This keeps the
 // selected opening available when the chart is switched between 3M and 5M.
@@ -65,7 +70,6 @@ if isSelectedOpeningBar
     fixedPreviousDayPriceRange := previousDayPriceRange
     fixedPreviousDayRange := previousDayRange
 lowRangeMode = fixedPreviousDayPriceRange < previousDayRangeThreshold
-slOffsetFactor = lowRangeMode ? 0.25 : 0.125
 // After TP1, every trailing step is always 12.5% in both range modes.
 trailingOffsetFactor = 0.125
 rangeSource = input.string(
@@ -775,7 +779,7 @@ if longSignal
                     nextTP1Index := i
                 else if useAsTP2
                     nextTP2 := lvl
-    float plannedLongSL = array.get(levels, buyIndex) - rangeVal * slOffsetFactor
+    float plannedLongSL = array.get(levels, buyIndex) - initialSLOffset
     float plannedLongRisk = math.abs(close - plannedLongSL)
     float plannedLongReward = not na(nextTP1) ? math.abs(nextTP1 - close) : na
     float plannedLongRR = plannedLongRisk > 0 ? plannedLongReward / plannedLongRisk : na
@@ -803,7 +807,7 @@ if longSignal
         tp2Label := na
         tp2Box := na
         tradeEntry := close
-        // SL is halfway through one 25% interval from the rejected level
+        // Initial SL uses the adjustable fixed-price offset from the rejected level.
         tradeSL := plannedLongSL
         tradeTP1 := nextTP1
         tradeTP2 := na
@@ -918,7 +922,7 @@ if shortSignal
                     nextTP1Index := i
                 else if useAsTP2
                     nextTP2 := lvl
-    float plannedShortSL = array.get(levels, sellIndex) + rangeVal * slOffsetFactor
+    float plannedShortSL = array.get(levels, sellIndex) + initialSLOffset
     float plannedShortRisk = math.abs(plannedShortSL - close)
     float plannedShortReward = not na(nextTP1) ? math.abs(close - nextTP1) : na
     float plannedShortRR = plannedShortRisk > 0 ? plannedShortReward / plannedShortRisk : na
@@ -946,7 +950,7 @@ if shortSignal
         tp2Label := na
         tp2Box := na
         tradeEntry := close
-        // SL is halfway through one 25% interval from the rejected level
+        // Initial SL uses the adjustable fixed-price offset from the rejected level.
         tradeSL := plannedShortSL
         tradeTP1 := nextTP1
         tradeTP2 := na
