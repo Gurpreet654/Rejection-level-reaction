@@ -1,12 +1,24 @@
 //@version=6
-indicator("Opening Range Levels + 3M/5M Trade Map", overlay=true,
+indicator("Opening Range Trade Map - Single Day Germany v6", overlay=true,
      max_lines_count=500, max_labels_count=500, max_boxes_count=500)
 //────────────────────────────────────────────
 // INPUTS
 //────────────────────────────────────────────
-openingTime = input.time(
-     defval=timestamp("20 Aug 2026 03:30 +0530"),
-     title="Opening Candle Date and Time (IST)")
+selectedTradingDate = input.time(
+     defval=timestamp("20 Aug 2026 00:00 +0200"),
+     title="Trading Date (Germany)")
+
+string germanTimezone = "Europe/Berlin"
+selectedYear = year(selectedTradingDate, germanTimezone)
+selectedMonth = month(selectedTradingDate, germanTimezone)
+selectedDay = dayofmonth(selectedTradingDate, germanTimezone)
+
+// The time selected in the date picker is ignored. Each chosen German date
+// automatically runs from 00:00 until 23:00 Europe/Berlin time.
+openingTime = timestamp(germanTimezone, selectedYear, selectedMonth, selectedDay, 0, 0)
+closingTime = timestamp(germanTimezone, selectedYear, selectedMonth, selectedDay, 23, 0)
+selectedSessionActive = time >= openingTime and time < closingTime
+selectedSessionClosingBar = time < closingTime and time_close >= closingTime
 // GVZopen = input.float(20.0, "GVZ Opening", minval=0.01, step=0.01)
 // string volatilitySymbol = "VANTAGE:VIX"
 // GVZopenA = request.security(
@@ -124,13 +136,13 @@ var bool upperBand1Active = false
 var bool upperBand2Active = false
 var bool upperBand3Active = false
 var bool upperBand4Active = false
-if not na(U100) and close > U100
+if selectedSessionActive and not na(U100) and close > U100
     upperBand1Active := true
-if not na(U200) and close > U200
+if selectedSessionActive and not na(U200) and close > U200
     upperBand2Active := true
-if not na(U300) and close > U300
+if selectedSessionActive and not na(U300) and close > U300
     upperBand3Active := true
-if not na(U400) and close > U400
+if selectedSessionActive and not na(U400) and close > U400
     upperBand4Active := true
 D25  = openPrice - rangeVal * 0.25
 D50  = openPrice - rangeVal * 0.50
@@ -156,58 +168,58 @@ var bool lowerBand1Active = false
 var bool lowerBand2Active = false
 var bool lowerBand3Active = false
 var bool lowerBand4Active = false
-if not na(D100) and close < D100
+if selectedSessionActive and not na(D100) and close < D100
     lowerBand1Active := true
-if not na(D200) and close < D200
+if selectedSessionActive and not na(D200) and close < D200
     lowerBand2Active := true
-if not na(D300) and close < D300
+if selectedSessionActive and not na(D300) and close < D300
     lowerBand3Active := true
-if not na(D400) and close < D400
+if selectedSessionActive and not na(D400) and close < D400
     lowerBand4Active := true
 //────────────────────────────────────────────
 // MAIN LEVEL PLOTS
 //────────────────────────────────────────────
-plot(openPrice, "Opening", color=color.yellow)
-plot(U25, "+25%", color=color.green)
-plot(U50, "+50%", color=color.green)
-plot(U75, "+75%", color=color.green)
-plot(U100, "+100%", color=color.green)
-plot(upperBand1Active ? U125 : na, "+125%", color=color.aqua)
-plot(upperBand1Active ? U150 : na, "+150%", color=color.aqua)
-plot(upperBand1Active ? U175 : na, "+175%", color=color.aqua)
-plot(upperBand1Active ? U200 : na, "+200%", color=color.aqua)
-plot(upperBand2Active ? U225 : na, "+225%", color=color.blue)
-plot(upperBand2Active ? U250 : na, "+250%", color=color.blue)
-plot(upperBand2Active ? U275 : na, "+275%", color=color.blue)
-plot(upperBand2Active ? U300 : na, "+300%", color=color.blue)
-plot(upperBand3Active ? U325 : na, "+325%", color=color.aqua)
-plot(upperBand3Active ? U350 : na, "+350%", color=color.aqua)
-plot(upperBand3Active ? U375 : na, "+375%", color=color.aqua)
-plot(upperBand3Active ? U400 : na, "+400%", color=color.aqua)
-plot(upperBand4Active ? U425 : na, "+425%", color=color.blue)
-plot(upperBand4Active ? U450 : na, "+450%", color=color.blue)
-plot(upperBand4Active ? U475 : na, "+475%", color=color.blue)
-plot(upperBand4Active ? U500 : na, "+500%", color=color.blue)
-plot(D25, "-25%", color=color.red)
-plot(D50, "-50%", color=color.red)
-plot(D75, "-75%", color=color.red)
-plot(D100, "-100%", color=color.red)
-plot(lowerBand1Active ? D125 : na, "-125%", color=color.orange)
-plot(lowerBand1Active ? D150 : na, "-150%", color=color.orange)
-plot(lowerBand1Active ? D175 : na, "-175%", color=color.orange)
-plot(lowerBand1Active ? D200 : na, "-200%", color=color.orange)
-plot(lowerBand2Active ? D225 : na, "-225%", color=color.purple)
-plot(lowerBand2Active ? D250 : na, "-250%", color=color.purple)
-plot(lowerBand2Active ? D275 : na, "-275%", color=color.purple)
-plot(lowerBand2Active ? D300 : na, "-300%", color=color.purple)
-plot(lowerBand3Active ? D325 : na, "-325%", color=color.orange)
-plot(lowerBand3Active ? D350 : na, "-350%", color=color.orange)
-plot(lowerBand3Active ? D375 : na, "-375%", color=color.orange)
-plot(lowerBand3Active ? D400 : na, "-400%", color=color.orange)
-plot(lowerBand4Active ? D425 : na, "-425%", color=color.purple)
-plot(lowerBand4Active ? D450 : na, "-450%", color=color.purple)
-plot(lowerBand4Active ? D475 : na, "-475%", color=color.purple)
-plot(lowerBand4Active ? D500 : na, "-500%", color=color.purple)
+plot(selectedSessionActive ? openPrice : na, "Opening", color=color.yellow)
+plot(selectedSessionActive ? U25 : na, "+25%", color=color.green)
+plot(selectedSessionActive ? U50 : na, "+50%", color=color.green)
+plot(selectedSessionActive ? U75 : na, "+75%", color=color.green)
+plot(selectedSessionActive ? U100 : na, "+100%", color=color.green)
+plot(selectedSessionActive and upperBand1Active ? U125 : na, "+125%", color=color.aqua)
+plot(selectedSessionActive and upperBand1Active ? U150 : na, "+150%", color=color.aqua)
+plot(selectedSessionActive and upperBand1Active ? U175 : na, "+175%", color=color.aqua)
+plot(selectedSessionActive and upperBand1Active ? U200 : na, "+200%", color=color.aqua)
+plot(selectedSessionActive and upperBand2Active ? U225 : na, "+225%", color=color.blue)
+plot(selectedSessionActive and upperBand2Active ? U250 : na, "+250%", color=color.blue)
+plot(selectedSessionActive and upperBand2Active ? U275 : na, "+275%", color=color.blue)
+plot(selectedSessionActive and upperBand2Active ? U300 : na, "+300%", color=color.blue)
+plot(selectedSessionActive and upperBand3Active ? U325 : na, "+325%", color=color.aqua)
+plot(selectedSessionActive and upperBand3Active ? U350 : na, "+350%", color=color.aqua)
+plot(selectedSessionActive and upperBand3Active ? U375 : na, "+375%", color=color.aqua)
+plot(selectedSessionActive and upperBand3Active ? U400 : na, "+400%", color=color.aqua)
+plot(selectedSessionActive and upperBand4Active ? U425 : na, "+425%", color=color.blue)
+plot(selectedSessionActive and upperBand4Active ? U450 : na, "+450%", color=color.blue)
+plot(selectedSessionActive and upperBand4Active ? U475 : na, "+475%", color=color.blue)
+plot(selectedSessionActive and upperBand4Active ? U500 : na, "+500%", color=color.blue)
+plot(selectedSessionActive ? D25 : na, "-25%", color=color.red)
+plot(selectedSessionActive ? D50 : na, "-50%", color=color.red)
+plot(selectedSessionActive ? D75 : na, "-75%", color=color.red)
+plot(selectedSessionActive ? D100 : na, "-100%", color=color.red)
+plot(selectedSessionActive and lowerBand1Active ? D125 : na, "-125%", color=color.orange)
+plot(selectedSessionActive and lowerBand1Active ? D150 : na, "-150%", color=color.orange)
+plot(selectedSessionActive and lowerBand1Active ? D175 : na, "-175%", color=color.orange)
+plot(selectedSessionActive and lowerBand1Active ? D200 : na, "-200%", color=color.orange)
+plot(selectedSessionActive and lowerBand2Active ? D225 : na, "-225%", color=color.purple)
+plot(selectedSessionActive and lowerBand2Active ? D250 : na, "-250%", color=color.purple)
+plot(selectedSessionActive and lowerBand2Active ? D275 : na, "-275%", color=color.purple)
+plot(selectedSessionActive and lowerBand2Active ? D300 : na, "-300%", color=color.purple)
+plot(selectedSessionActive and lowerBand3Active ? D325 : na, "-325%", color=color.orange)
+plot(selectedSessionActive and lowerBand3Active ? D350 : na, "-350%", color=color.orange)
+plot(selectedSessionActive and lowerBand3Active ? D375 : na, "-375%", color=color.orange)
+plot(selectedSessionActive and lowerBand3Active ? D400 : na, "-400%", color=color.orange)
+plot(selectedSessionActive and lowerBand4Active ? D425 : na, "-425%", color=color.purple)
+plot(selectedSessionActive and lowerBand4Active ? D450 : na, "-450%", color=color.purple)
+plot(selectedSessionActive and lowerBand4Active ? D475 : na, "-475%", color=color.purple)
+plot(selectedSessionActive and lowerBand4Active ? D500 : na, "-500%", color=color.purple)
 //────────────────────────────────────────────
 // LEVEL ARRAY
 // LOWEST → HIGHEST
@@ -262,7 +274,7 @@ isSignalTF = timeframe.isminutes and timeframe.multiplier == signalMinutes
 // Do not permit new signals during the first 30 minutes after the selected
 // market opening. The first eligible signal candle must open at or after +30.
 entryCutoffTime = openingTime + 30 * 60 * 1000
-entryWindowOpen = time >= entryCutoffTime
+entryWindowOpen = selectedSessionActive and time >= entryCutoffTime and time_close < closingTime
 //────────────────────────────────────────────
 // ACTIVE TRADE VARIABLES
 //────────────────────────────────────────────
@@ -616,6 +628,34 @@ if shortActive
             blockedLevelIndex := na
             blockedDirection := 0
         shortActive := false
+
+//────────────────────────────────────────────
+// FORCE SAME-DAY EXIT AT 23:00 GERMANY TIME
+//────────────────────────────────────────────
+if selectedSessionClosingBar
+    if longActive
+        collapseTradeMap("BUY, DAY CLOSE", color.gray, close)
+        capturedDollars += close - tradeEntry
+        completedTrades += 1
+        lastTradeExitBar := bar_index
+        longActive := false
+
+    if shortActive
+        collapseTradeMap("SELL, DAY CLOSE", color.gray, close)
+        capturedDollars += tradeEntry - close
+        completedTrades += 1
+        lastTradeExitBar := bar_index
+        shortActive := false
+
+    // Nothing from the selected day carries into the following session.
+    pendingRRDirection := 0
+    pendingRRLevelIndex := na
+    pendingRRStartBar := na
+    breakoutBiasLevelIndex := na
+    breakoutBiasDirection := 0
+    breakoutBiasStartBar := na
+    blockedLevelIndex := na
+    blockedDirection := 0
 //────────────────────────────────────────────
 // FIND BUY / SELL SETUP
 //────────────────────────────────────────────
@@ -625,7 +665,7 @@ bool canCreateNewSignal = na(lastTradeExitBar) or bar_index > lastTradeExitBar
 
 // Keep a direct-break bias even if price later closes back through the same
 // level. Only a touch of another visible range level invalidates it.
-if isSignalTF and breakoutBiasDirection != 0 and bar_index > breakoutBiasStartBar
+if isSignalTF and selectedSessionActive and breakoutBiasDirection != 0 and bar_index > breakoutBiasStartBar
     bool biasTouchedAnotherLevel = false
 
     for i = 0 to lastLevelIndex
@@ -640,7 +680,7 @@ if isSignalTF and breakoutBiasDirection != 0 and bar_index > breakoutBiasStartBa
 
 // When no bias is active, record the highest level crossed upward or the
 // lowest level crossed downward by the candle close.
-if isSignalTF and not longActive and not shortActive and breakoutBiasDirection == 0
+if isSignalTF and selectedSessionActive and not longActive and not shortActive and breakoutBiasDirection == 0
     int upwardBreakIndex = na
     int downwardBreakIndex = na
 
@@ -715,7 +755,7 @@ if isSignalTF and entryWindowOpen and canCreateNewSignal and not longActive and 
         if close < pendingLevel and (shortTouchedLevel or shortRetracedToward or shortReclaimedLevel)
             sellIndex := pendingRRLevelIndex
 // Merely reaching any other range level also refreshes the blocked level.
-if isSignalTF and not longActive and not shortActive and not na(blockedLevelIndex)
+if isSignalTF and selectedSessionActive and not longActive and not shortActive and not na(blockedLevelIndex)
     bool touchedAnotherLevel = false
     for i = 0 to lastLevelIndex
         lvl = array.get(levels, i)
