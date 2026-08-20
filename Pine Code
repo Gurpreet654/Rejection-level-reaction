@@ -5,16 +5,21 @@ indicator("Opening Range Levels + 3M/5M Trade Map", overlay=true,
 // INPUTS
 //────────────────────────────────────────────
 openingTime = input.time(
-     defval=timestamp("15 Aug 2026 09:15 +0530"),
+     defval=timestamp("20 Aug 2026 03:30 +0530"),
      title="Opening Candle Date and Time (IST)")
 // GVZopen = input.float(20.0, "GVZ Opening", minval=0.01, step=0.01)
-string volatilitySymbol = "VANTAGE:VIX"
-GVZopenA = request.security(
-     volatilitySymbol,
-     "D",
-     open,
-     gaps=barmerge.gaps_off,
-     lookahead=barmerge.lookahead_off)
+// string volatilitySymbol = "VANTAGE:VIX"
+// GVZopenA = request.security(
+//      volatilitySymbol,
+//      "D",
+//      open,
+//      gaps=barmerge.gaps_off,
+//      lookahead=barmerge.lookahead_off)
+GVZopenA = input.float(
+     17.525,
+     "VIX Opening Value",
+     minval=0.01,
+     step=0.001)
 signalMinutes = input.int(5, "Signal Timeframe (Minutes)", options=[3, 5])
 previousDayRangeThreshold = input.float(
      85.0,
@@ -51,20 +56,14 @@ previousDayLow = request.security(
      lookahead=barmerge.lookahead_on)
 previousDayPriceRange = previousDayHigh - previousDayLow
 previousDayRange = previousDayPriceRange * 100
-
-// Freeze all range-source data on the selected opening candle. Vantage's
-// current daily VIX bar can begin later than the selected market opening; using
-// its live series directly would recalculate rangeVal and make every level jump.
+// Freeze the previous-day range on the selected opening candle. The VIX value
+// is supplied manually through the input above and therefore remains fixed.
 isSelectedOpeningBar = time <= openingTime and time_close > openingTime
-var float fixedVIXOpening = na
 var float fixedPreviousDayPriceRange = na
 var float fixedPreviousDayRange = na
-
 if isSelectedOpeningBar
-    fixedVIXOpening := GVZopenA
     fixedPreviousDayPriceRange := previousDayPriceRange
     fixedPreviousDayRange := previousDayRange
-
 lowRangeMode = fixedPreviousDayPriceRange < previousDayRangeThreshold
 slOffsetFactor = lowRangeMode ? 0.25 : 0.125
 // After TP1, every trailing step is always 12.5% in both range modes.
@@ -73,7 +72,7 @@ rangeSource = input.string(
      "Volatility Index",
      "Range Source",
      options=["Volatility Index", "Previous Day Range"])
-GVZopen = rangeSource == "Volatility Index" ? fixedVIXOpening : fixedPreviousDayRange
+GVZopen = rangeSource == "Volatility Index" ? GVZopenA : fixedPreviousDayRange
 
 
 //────────────────────────────────────────────
@@ -90,7 +89,7 @@ var table rangeInfo = table.new(
      frame_width=1)
 if barstate.islast
     table.cell(rangeInfo, 0, 0, "VIX opening", text_color=color.white)
-    table.cell(rangeInfo, 1, 0, str.tostring(fixedVIXOpening, "#.###"), text_color=color.aqua)
+    table.cell(rangeInfo, 1, 0, str.tostring(GVZopenA, "#.###"), text_color=color.aqua)
     table.cell(rangeInfo, 0, 1, "Previous H-L ($)", text_color=color.white)
     table.cell(rangeInfo, 1, 1, str.tostring(fixedPreviousDayPriceRange*100, format.mintick), text_color=color.aqua)
 //────────────────────────────────────────────
